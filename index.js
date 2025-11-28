@@ -20,6 +20,7 @@ const bakendKopi = () => {
       const allowedOrigins = [
         CLIENT_ORIGIN,
         "http://localhost:5173",
+        /^https:\/\/.*\.vercel\.app$/, // Semua subdomain Vercel
         /^http:\/\/10\.\d+\.\d+\.\d+:5173$/, // IP lokal 10.x.x.x:5173
         /^http:\/\/192\.168\.\d+\.\d+:5173$/, // IP lokal 192.168.x.x:5173
         /^http:\/\/172\.\d+\.\d+\.\d+:5173$/, // IP lokal 172.x.x.x:5173
