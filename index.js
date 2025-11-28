@@ -8,11 +8,8 @@ const bakendKopi = () => {
   const PORT = process.env.PORT || 3000;
   const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 
-  app.use(express.json());
-  app.use(cookieParser()); // WAJIB UNTUK BACA COOKIE!
-  
-  // KONFIGURASI CORS - Support localhost, IP lokal, dan Vercel
-  app.use(cors({
+  // KONFIGURASI CORS - HARUS SEBELUM express.json() dan route lainnya
+  const corsOptions = {
     origin: (origin, callback) => {
       // Allow requests with no origin (mobile apps, Postman, etc)
       if (!origin) {
@@ -41,17 +38,31 @@ const bakendKopi = () => {
       });
       
       if (isAllowed) {
+        console.log(`[CORS] Allowed origin: ${origin}`);
         callback(null, true);
       } else {
         // Log untuk debugging
-        console.log(`CORS blocked origin: ${origin}`);
+        console.log(`[CORS] Blocked origin: ${origin}`);
+        console.log(`[CORS] CLIENT_ORIGIN env: ${CLIENT_ORIGIN}`);
         callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  }));
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Set-Cookie'],
+  };
+  
+  app.use(cors(corsOptions));
+  
+  // Middleware untuk log request origin (untuk debugging)
+  app.use((req, res, next) => {
+    console.log(`[REQUEST] ${req.method} ${req.path} - Origin: ${req.get('origin') || 'no origin'}`);
+    next();
+  });
+  
+  app.use(express.json());
+  app.use(cookieParser()); // WAJIB UNTUK BACA COOKIE!
 
   // Health check endpoint
   app.get("/health", (req, res) => {
