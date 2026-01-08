@@ -15,19 +15,20 @@ const bakendKopi = () => {
       if (!origin) {
         return callback(null, true);
       }
-      
+
       // List allowed origins
       const allowedOrigins = [
         CLIENT_ORIGIN,
         "http://localhost:5173",
+        "https://kopisenja-app.vercel.app/",
         /^https:\/\/.*\.vercel\.app$/, // Semua subdomain Vercel
         /^http:\/\/10\.\d+\.\d+\.\d+:5173$/, // IP lokal 10.x.x.x:5173
         /^http:\/\/192\.168\.\d+\.\d+:5173$/, // IP lokal 192.168.x.x:5173
         /^http:\/\/172\.\d+\.\d+\.\d+:5173$/, // IP lokal 172.x.x.x:5173
       ];
-      
+
       // Check if origin matches any allowed pattern
-      const isAllowed = allowedOrigins.some(allowed => {
+      const isAllowed = allowedOrigins.some((allowed) => {
         if (typeof allowed === "string") {
           return origin === allowed;
         }
@@ -36,7 +37,7 @@ const bakendKopi = () => {
         }
         return false;
       });
-      
+
       if (isAllowed) {
         console.log(`[CORS] Allowed origin: ${origin}`);
         callback(null, true);
@@ -48,19 +49,23 @@ const bakendKopi = () => {
       }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    exposedHeaders: ['Set-Cookie'],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    exposedHeaders: ["Set-Cookie"],
   };
-  
+
   app.use(cors(corsOptions));
-  
+
   // Middleware untuk log request origin (untuk debugging)
   app.use((req, res, next) => {
-    console.log(`[REQUEST] ${req.method} ${req.path} - Origin: ${req.get('origin') || 'no origin'}`);
+    console.log(
+      `[REQUEST] ${req.method} ${req.path} - Origin: ${
+        req.get("origin") || "no origin"
+      }`
+    );
     next();
   });
-  
+
   app.use(express.json());
   app.use(cookieParser()); // WAJIB UNTUK BACA COOKIE!
 
