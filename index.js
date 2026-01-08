@@ -56,7 +56,6 @@ const bakendKopi = () => {
 
   app.use(cors(corsOptions));
 
-  // Middleware untuk log request origin (untuk debugging)
   app.use((req, res, next) => {
     console.log(
       `[REQUEST] ${req.method} ${req.path} - Origin: ${
@@ -66,10 +65,15 @@ const bakendKopi = () => {
     next();
   });
 
-  app.use(express.json());
-  app.use(cookieParser()); // WAJIB UNTUK BACA COOKIE!
+  // ⬇️ INI FIX UTAMA
+  app.use((req, res, next) => {
+    if (req.is("multipart/form-data")) return next();
+    express.json({ limit: "1mb" })(req, res, next);
+  });
 
-  // Health check endpoint
+  app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+  app.use(cookieParser());
+
   app.get("/health", (req, res) => {
     res.status(200).json({ status: "ok", message: "Backend is running" });
   });

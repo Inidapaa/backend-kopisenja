@@ -16,9 +16,9 @@ router.post("/logout", AuthController.AuthLogout);
 router.get("/me", authMiddleware, AuthController.AuthMe);
 
 // Produk Routes
-router.get("/products", upload.single("image"), ProductController.getAll);
+router.get("/products", ProductController.getAll);
 router.get("/products/:id", ProductController.getById);
-router.post("/products", ProductController.create);
+router.post("/products", upload.single("image"), ProductController.create);
 router.put("/products/:id", ProductController.update);
 router.delete("/products/:id", ProductController.remove);
 
