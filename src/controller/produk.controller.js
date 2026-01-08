@@ -60,42 +60,38 @@ export default {
    */
   async create(req, res) {
     try {
-      const { name, description, price, image, imageBase64, category } = req.body;
-      console.log("[CREATE PRODUCT] Received:", { name, hasImageBase64: !!imageBase64, category });
-      
-      let imageUrl = image ?? null;
+      const { name, description, price, category } = req.body;
+      const file = req.file; // dari multer
 
-      // Upload image to Supabase Storage if imageBase64 is provided
-      if (imageBase64) {
-        console.log("[CREATE PRODUCT] Processing image upload...");
-        const fileExt = "jpg";
+      let imageUrl = null;
+
+      // ✅ Kalau ada file, upload ke Supabase
+      if (file) {
+        const fileExt = file.mimetype.split("/")[1];
         const fileName = `prod_${Date.now()}.${fileExt}`;
         const filePath = `produk/images/${fileName}`;
 
-        // Convert base64 to buffer
-        const base64Data = imageBase64.split(",")[1] || imageBase64;
-        const buffer = Buffer.from(base64Data, "base64");
-
-        console.log("[CREATE PRODUCT] Uploading to storage...", { filePath, bufferSize: buffer.length });
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from("kopi-senja-bucket")
-          .upload(filePath, buffer, {
-            contentType: "image/jpeg",
-            upsert: true,
+          .upload(filePath, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false,
           });
 
         if (uploadError) {
-          console.error("[CREATE PRODUCT] Error uploading image:", uploadError);
-          // Don't throw - continue without image
-          console.warn("[CREATE PRODUCT] Continuing without image due to upload error");
-        } else {
-          console.log("[CREATE PRODUCT] Upload successful:", uploadData.path);
-          const { data: publicUrlData } = supabase.storage
-            .from("kopi-senja-bucket")
-            .getPublicUrl(uploadData.path);
-          imageUrl = publicUrlData.publicUrl;
-          console.log("[CREATE PRODUCT] Public URL:", imageUrl);
+          console.error("[UPLOAD ERROR]", uploadError);
+          return res.status(400).json({
+            status: false,
+            pesan: "Gagal upload gambar",
+            error: uploadError.message,
+          });
         }
+
+        const { data: publicUrlData } = supabase.storage
+          .from("kopi-senja-bucket")
+          .getPublicUrl(uploadData.path);
+
+        imageUrl = publicUrlData.publicUrl;
       }
 
       const payload = {
@@ -106,14 +102,14 @@ export default {
         category: category ?? null,
       };
 
-      console.log("[CREATE PRODUCT] Inserting payload:", { ...payload, image: imageUrl ? "URL provided" : "null" });
       const { data, error } = await supabase
         .from("products")
         .insert([payload])
-        .select();
+        .select()
+        .single();
 
       if (error) {
-        console.error("[CREATE PRODUCT] Error inserting:", error.message);
+        console.error("[DB ERROR]", error);
         return res.status(400).json({
           status: false,
           pesan: "Gagal menambahkan produk",
@@ -121,18 +117,16 @@ export default {
         });
       }
 
-      console.log("[CREATE PRODUCT] Success:", data[0]);
       return res.status(201).json({
         status: true,
         pesan: "Produk berhasil ditambahkan",
-        data: data[0],
+        data,
       });
     } catch (error) {
-      console.error("[CREATE PRODUCT] Unexpected error:", error);
-      return res.status(400).json({
+      console.error("[CREATE PRODUCT ERROR]", error);
+      return res.status(500).json({
         status: false,
-        pesan: "Gagal menambahkan produk",
-        error: error.message,
+        pesan: error.message,
       });
     }
   },
@@ -144,15 +138,21 @@ export default {
   async update(req, res) {
     try {
       const { id } = req.params;
-      const { name, description, price, image, imageBase64, category } = req.body;
-      console.log("[UPDATE PRODUCT] Received:", { id, name, hasImageBase64: !!imageBase64, category });
-      
+      const { name, description, price, image, imageBase64, category } =
+        req.body;
+      console.log("[UPDATE PRODUCT] Received:", {
+        id,
+        name,
+        hasImageBase64: !!imageBase64,
+        category,
+      });
+
       let imageUrl = image;
 
       // Upload new image if imageBase64 is provided
       if (imageBase64) {
         console.log("[UPDATE PRODUCT] Processing image upload...");
-        
+
         // Get current product to optionally delete old image
         const { data: currentProduct } = await supabase
           .from("products")
@@ -178,7 +178,9 @@ export default {
 
         if (uploadError) {
           console.error("[UPDATE PRODUCT] Error uploading image:", uploadError);
-          console.warn("[UPDATE PRODUCT] Continuing without updating image due to upload error");
+          console.warn(
+            "[UPDATE PRODUCT] Continuing without updating image due to upload error"
+          );
         } else {
           console.log("[UPDATE PRODUCT] Upload successful:", uploadData.path);
           const { data: publicUrlData } = supabase.storage
@@ -199,9 +201,14 @@ export default {
       };
 
       // hapus kunci undefined agar tidak overwrite
-      Object.keys(updatePayload).forEach((k) => updatePayload[k] === undefined && delete updatePayload[k]);
+      Object.keys(updatePayload).forEach(
+        (k) => updatePayload[k] === undefined && delete updatePayload[k]
+      );
 
-      console.log("[UPDATE PRODUCT] Updating payload:", { ...updatePayload, image: imageUrl ? "URL provided" : "not updated" });
+      console.log("[UPDATE PRODUCT] Updating payload:", {
+        ...updatePayload,
+        image: imageUrl ? "URL provided" : "not updated",
+      });
       const { data, error } = await supabase
         .from("products")
         .update(updatePayload)

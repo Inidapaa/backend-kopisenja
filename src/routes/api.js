@@ -4,6 +4,7 @@ import ProductController from "../controller/produk.controller.js";
 import AuthController from "../controller/auth.controller.js";
 import OrderController from "../controller/order.controller.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
+import upload from "../middleware/uploadMidlleware.js";
 
 const router = express.Router();
 
@@ -15,7 +16,7 @@ router.post("/logout", AuthController.AuthLogout);
 router.get("/me", authMiddleware, AuthController.AuthMe);
 
 // Produk Routes
-router.get("/products", ProductController.getAll);
+router.get("/products", upload.single("image"), ProductController.getAll);
 router.get("/products/:id", ProductController.getById);
 router.post("/products", ProductController.create);
 router.put("/products/:id", ProductController.update);
